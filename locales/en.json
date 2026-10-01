@@ -1,0 +1,10 @@
+{
+    "app_description": "Messages, groups, status updates and calls with the people in your contacts.",
+    "default_about": "Available",
+    "waypoint_set": "Location marked on your GPS",
+    "preview_image": "📷 Photo",
+    "preview_gif": "🎞️ GIF",
+    "preview_audio": "🎤 Voice message",
+    "preview_location": "📍 Location",
+    "preview_contact": "👤 Contact"
+}

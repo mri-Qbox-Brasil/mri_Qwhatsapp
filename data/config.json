@@ -1,0 +1,10 @@
+{
+    "maxMessageLength": 2000,
+    "pageSize": 40,
+    "maxGroupMembers": 64,
+    "maxForward": 5,
+    "statusHours": 24,
+    "editWindowMinutes": 15,
+    "revokeWindowMinutes": 60,
+    "callLogLimit": 60
+}

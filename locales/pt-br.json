@@ -1,0 +1,10 @@
+{
+    "app_description": "Mensagens, grupos, status e ligações com quem está na sua agenda.",
+    "default_about": "Disponível",
+    "waypoint_set": "Localização marcada no GPS",
+    "preview_image": "📷 Foto",
+    "preview_gif": "🎞️ GIF",
+    "preview_audio": "🎤 Mensagem de voz",
+    "preview_location": "📍 Localização",
+    "preview_contact": "👤 Contato"
+}
