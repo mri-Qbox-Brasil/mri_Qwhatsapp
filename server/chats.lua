@@ -51,7 +51,8 @@ end
 chats.isBlocked = isBlocked
 
 local function latestId(chatId)
-    return MySQL.scalar.await('SELECT COALESCE(MAX(`id`), 0) FROM `mri_whatsapp_messages` WHERE `chat_id` = ?', { chatId }) or 0
+    -- COALESCE comes back as DECIMAL, which oxmysql hands over as a string.
+    return tonumber(MySQL.scalar.await('SELECT COALESCE(MAX(`id`), 0) FROM `mri_whatsapp_messages` WHERE `chat_id` = ?', { chatId })) or 0
 end
 
 -------------------------------------------------------------------- serialization
@@ -306,14 +307,17 @@ local function deliver(chat, row, senderPhone)
                     local title = chat.kind == 'group' and (chat.name or 'Whatzap') or senderName
                     local body = preview(row)
                     if chat.kind == 'group' then body = ('%s: %s'):format(senderName, body) end
-                    exports['sd-phone']:notify(src, {
+                    -- The message is already stored; a failed banner must not fail the send.
+                    local banner = {
                         app = 'Whatzap',
                         appId = 'mri_whatsapp',
                         title = title,
                         body = body:sub(1, 140),
                         image = chat.kind == 'group' and chat.avatar or (senderAccount and senderAccount.avatar) or nil,
                         quietInApp = true,
-                    })
+                    }
+                    local notified, err = pcall(function() return exports['sd-phone']:notify(src, banner) end)
+                    if not notified then lib.print.warn(('notify: %s'):format(err)) end
                 end
             end
         end
@@ -891,6 +895,9 @@ handlers.leaveGroup = function(_, phone, payload)
     MySQL.update.await('DELETE FROM `mri_whatsapp_members` WHERE `chat_id` = ? AND `phone` = ?', { chatId, phone })
     local remaining = MySQL.scalar.await('SELECT COUNT(*) FROM `mri_whatsapp_members` WHERE `chat_id` = ?', { chatId }) or 0
     if remaining == 0 then
+        for _, tbl in ipairs({ 'mri_whatsapp_reactions', 'mri_whatsapp_hidden', 'mri_whatsapp_starred' }) do
+            MySQL.update.await(('DELETE t FROM `%s` t JOIN `mri_whatsapp_messages` x ON x.`id` = t.`message_id` WHERE x.`chat_id` = ?'):format(tbl), { chatId })
+        end
         MySQL.update.await('DELETE FROM `mri_whatsapp_messages` WHERE `chat_id` = ?', { chatId })
         MySQL.update.await('DELETE FROM `mri_whatsapp_chats` WHERE `id` = ?', { chatId })
     else

@@ -105,11 +105,16 @@ handlers.statusPost = function(_, phone, payload)
     return ok({ id = id })
 end
 
-handlers.statusView = function(_, phone, payload)
+handlers.statusView = function(source, phone, payload)
     local id = tonumber(payload.id)
     local row = id and MySQL.single.await('SELECT `phone` FROM `mri_whatsapp_statuses` WHERE `id` = ?', { id })
     if not row or row.phone == phone then return ok(true) end
-    if chats.isBlocked(row.phone, phone) then return fail('invalid') end
+    if chats.isBlocked(row.phone, phone) or chats.isBlocked(phone, row.phone) then return fail('invalid') end
+    local visible = false
+    for _, other in ipairs(audienceOf(source, phone)) do
+        if other == row.phone then visible = true break end
+    end
+    if not visible then return fail('invalid') end
     MySQL.insert.await('INSERT IGNORE INTO `mri_whatsapp_status_views` (`status_id`, `phone`, `viewed_at`) VALUES (?, ?, ?)', { id, phone, identity.now() })
     return ok(true)
 end
