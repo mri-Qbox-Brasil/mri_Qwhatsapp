@@ -33,9 +33,9 @@ local function audienceOf(source, phone)
             phones[#phones + 1] = contact.phone
         end
     end
-    local partners = MySQL.query.await([[SELECT b.`phone` FROM `mri_whatsapp_members` a
-        JOIN `mri_whatsapp_chats` c ON c.`id` = a.`chat_id` AND c.`kind` = 'direct'
-        JOIN `mri_whatsapp_members` b ON b.`chat_id` = a.`chat_id` AND b.`phone` <> a.`phone`
+    local partners = MySQL.query.await([[SELECT b.`phone` FROM `mri_whatzapp_members` a
+        JOIN `mri_whatzapp_chats` c ON c.`id` = a.`chat_id` AND c.`kind` = 'direct'
+        JOIN `mri_whatzapp_members` b ON b.`chat_id` = a.`chat_id` AND b.`phone` <> a.`phone`
         WHERE a.`phone` = ?]], { phone }) or {}
     for i = 1, #partners do
         local other = partners[i].phone
@@ -50,19 +50,19 @@ end
 handlers.statusList = function(source, phone)
     local t = identity.now()
     local mine = {}
-    for _, row in ipairs(MySQL.query.await('SELECT * FROM `mri_whatsapp_statuses` WHERE `phone` = ? AND `expires_at` > ? ORDER BY `id` ASC', { phone, t }) or {}) do
+    for _, row in ipairs(MySQL.query.await('SELECT * FROM `mri_whatzapp_statuses` WHERE `phone` = ? AND `expires_at` > ? ORDER BY `id` ASC', { phone, t }) or {}) do
         local item = serialize(row, true)
-        item.views = MySQL.scalar.await('SELECT COUNT(*) FROM `mri_whatsapp_status_views` WHERE `status_id` = ?', { row.id }) or 0
+        item.views = MySQL.scalar.await('SELECT COUNT(*) FROM `mri_whatzapp_status_views` WHERE `status_id` = ?', { row.id }) or 0
         mine[#mine + 1] = item
     end
 
     local audience = audienceOf(source, phone)
     local others = {}
     if #audience > 0 then
-        local rows = MySQL.query.await([[SELECT s.*, v.`viewed_at` FROM `mri_whatsapp_statuses` s
-            LEFT JOIN `mri_whatsapp_status_views` v ON v.`status_id` = s.`id` AND v.`phone` = ?
+        local rows = MySQL.query.await([[SELECT s.*, v.`viewed_at` FROM `mri_whatzapp_statuses` s
+            LEFT JOIN `mri_whatzapp_status_views` v ON v.`status_id` = s.`id` AND v.`phone` = ?
             WHERE s.`phone` IN (?) AND s.`expires_at` > ?
-            AND NOT EXISTS (SELECT 1 FROM `mri_whatsapp_blocks` b WHERE (b.`phone` = ? AND b.`blocked` = s.`phone`) OR (b.`phone` = s.`phone` AND b.`blocked` = ?))
+            AND NOT EXISTS (SELECT 1 FROM `mri_whatzapp_blocks` b WHERE (b.`phone` = ? AND b.`blocked` = s.`phone`) OR (b.`phone` = s.`phone` AND b.`blocked` = ?))
             ORDER BY s.`id` ASC]], { phone, audience, t, phone, phone }) or {}
         local byPhone, order = {}, {}
         for i = 1, #rows do
@@ -99,7 +99,7 @@ handlers.statusPost = function(_, phone, payload)
     local color = COLORS[payload.color] and payload.color or '#128C7E'
     local t = identity.now()
     local id = MySQL.insert.await(
-        'INSERT INTO `mri_whatsapp_statuses` (`phone`, `kind`, `body`, `media`, `color`, `created_at`, `expires_at`) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        'INSERT INTO `mri_whatzapp_statuses` (`phone`, `kind`, `body`, `media`, `color`, `created_at`, `expires_at`) VALUES (?, ?, ?, ?, ?, ?, ?)',
         { phone, kind, body ~= '' and body or nil, media, color, t, t + config.statusHours * 3600 }
     )
     return ok({ id = id })
@@ -107,7 +107,7 @@ end
 
 handlers.statusView = function(source, phone, payload)
     local id = tonumber(payload.id)
-    local row = id and MySQL.single.await('SELECT `phone` FROM `mri_whatsapp_statuses` WHERE `id` = ?', { id })
+    local row = id and MySQL.single.await('SELECT `phone` FROM `mri_whatzapp_statuses` WHERE `id` = ?', { id })
     if not row or row.phone == phone then return ok(true) end
     if chats.isBlocked(row.phone, phone) or chats.isBlocked(phone, row.phone) then return fail('invalid') end
     local visible = false
@@ -115,15 +115,15 @@ handlers.statusView = function(source, phone, payload)
         if other == row.phone then visible = true break end
     end
     if not visible then return fail('invalid') end
-    MySQL.insert.await('INSERT IGNORE INTO `mri_whatsapp_status_views` (`status_id`, `phone`, `viewed_at`) VALUES (?, ?, ?)', { id, phone, identity.now() })
+    MySQL.insert.await('INSERT IGNORE INTO `mri_whatzapp_status_views` (`status_id`, `phone`, `viewed_at`) VALUES (?, ?, ?)', { id, phone, identity.now() })
     return ok(true)
 end
 
 handlers.statusViewers = function(_, phone, payload)
     local id = tonumber(payload.id)
-    local row = id and MySQL.single.await('SELECT `phone` FROM `mri_whatsapp_statuses` WHERE `id` = ?', { id })
+    local row = id and MySQL.single.await('SELECT `phone` FROM `mri_whatzapp_statuses` WHERE `id` = ?', { id })
     if not row or row.phone ~= phone then return fail('invalid') end
-    local views = MySQL.query.await('SELECT `phone`, `viewed_at` FROM `mri_whatsapp_status_views` WHERE `status_id` = ? ORDER BY `viewed_at` DESC', { id }) or {}
+    local views = MySQL.query.await('SELECT `phone`, `viewed_at` FROM `mri_whatzapp_status_views` WHERE `status_id` = ? ORDER BY `viewed_at` DESC', { id }) or {}
     local phones = {}
     for i = 1, #views do phones[i] = views[i].phone end
     local accounts = identity.accounts(phones)
@@ -138,8 +138,8 @@ end
 handlers.statusDelete = function(_, phone, payload)
     local id = tonumber(payload.id)
     if not id then return fail('invalid') end
-    MySQL.update.await('DELETE FROM `mri_whatsapp_statuses` WHERE `id` = ? AND `phone` = ?', { id, phone })
-    MySQL.update.await('DELETE FROM `mri_whatsapp_status_views` WHERE `status_id` = ?', { id })
+    MySQL.update.await('DELETE FROM `mri_whatzapp_statuses` WHERE `id` = ? AND `phone` = ?', { id, phone })
+    MySQL.update.await('DELETE FROM `mri_whatzapp_status_views` WHERE `status_id` = ?', { id })
     return ok(true)
 end
 
@@ -147,8 +147,8 @@ CreateThread(function()
     while true do
         Wait(10 * 60000)
         local t = identity.now()
-        MySQL.update.await('DELETE v FROM `mri_whatsapp_status_views` v JOIN `mri_whatsapp_statuses` s ON s.`id` = v.`status_id` WHERE s.`expires_at` <= ?', { t })
-        MySQL.update.await('DELETE FROM `mri_whatsapp_statuses` WHERE `expires_at` <= ?', { t })
+        MySQL.update.await('DELETE v FROM `mri_whatzapp_status_views` v JOIN `mri_whatzapp_statuses` s ON s.`id` = v.`status_id` WHERE s.`expires_at` <= ?', { t })
+        MySQL.update.await('DELETE FROM `mri_whatzapp_statuses` WHERE `expires_at` <= ?', { t })
     end
 end)
 

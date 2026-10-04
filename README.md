@@ -1,6 +1,6 @@
-# mri_Qwhatsapp: Manual
+# mri_Qwhatzapp: Manual
 
-**Whatzap**: mensageiro para o [sd-phone](https://github.com/Samuels-Development/sd-phone) e o sd-tablet. Conversas, grupos, status, fotos, GIFs, áudio, localização, contatos e ligações, com o visual de um mensageiro moderno, tema claro e escuro e textos em pt-BR e inglês.
+**Whatzapp**: mensageiro para o [sd-phone](https://github.com/Samuels-Development/sd-phone) e o sd-tablet. Conversas, grupos, status, fotos, GIFs, áudio, localização, contatos e ligações, com o visual de um mensageiro moderno, tema claro e escuro e textos em pt-BR e inglês.
 
 O app entra pela API oficial de apps do sd-phone, então aparece sozinho no celular **e** no tablet, sem alterar nenhum dos dois. No celular o layout é de uma coluna; no tablet a lista de conversas e a conversa ficam lado a lado.
 
@@ -24,7 +24,7 @@ O app entra pela API oficial de apps do sd-phone, então aparece sozinho no celu
 |---|---|---|
 | `sd-phone` | Sim | Número, agenda, notificações, câmera, galeria e discador |
 | `ox_lib` | Sim | Callbacks e locale |
-| `oxmysql` | Sim | Tabelas próprias `mri_whatsapp_*` |
+| `oxmysql` | Sim | Tabelas próprias `mri_whatzapp_*` |
 | `sd-tablet` | Não | O app aparece também no tablet (sem ligações, que são só do celular) |
 | `qbx_core` | Não | Nome do personagem como nome inicial do perfil |
 
@@ -32,12 +32,12 @@ O app entra pela API oficial de apps do sd-phone, então aparece sozinho no celu
 
 ## Instalação
 
-1. Coloque a pasta `mri_Qwhatsapp` em `resources/`.
+1. Coloque a pasta `mri_Qwhatzapp` em `resources/`.
 2. Garanta que ela inicia **depois** do `sd-phone` no `server.cfg`:
    ```
    ensure sd-phone
    ensure sd-tablet
-   ensure mri_Qwhatsapp
+   ensure mri_Qwhatzapp
    ```
 3. Pronto. As tabelas são criadas na primeira subida e o app já vem instalado no celular de todo mundo.
 
@@ -55,7 +55,7 @@ O app entra pela API oficial de apps do sd-phone, então aparece sozinho no celu
 - **Privacidade:** visto por último e confirmação de leitura (recíprocos), bloqueio de contatos.
 - **Notificações:** banner e badge no celular, respeitando conversas silenciadas.
 
-A identidade é o número do sd-phone: com chip (unique phones), o Whatzap segue o número do chip em uso.
+A identidade é o número do sd-phone: com chip (unique phones), o Whatzapp segue o número do chip em uso.
 
 ---
 
@@ -86,7 +86,7 @@ Fotos e GIFs vêm da câmera, galeria e seletor de GIF do próprio sd-phone. Men
 
 Tabelas criadas automaticamente:
 
-`mri_whatsapp_accounts`, `mri_whatsapp_chats`, `mri_whatsapp_members`, `mri_whatsapp_messages`, `mri_whatsapp_reactions`, `mri_whatsapp_hidden`, `mri_whatsapp_starred`, `mri_whatsapp_blocks`, `mri_whatsapp_statuses`, `mri_whatsapp_status_views`, `mri_whatsapp_calls`.
+`mri_whatzapp_accounts`, `mri_whatzapp_chats`, `mri_whatzapp_members`, `mri_whatzapp_messages`, `mri_whatzapp_reactions`, `mri_whatzapp_hidden`, `mri_whatzapp_starred`, `mri_whatzapp_blocks`, `mri_whatzapp_statuses`, `mri_whatzapp_status_views`, `mri_whatzapp_calls`.
 
 Status vencidos são limpos sozinhos a cada 10 minutos.
 

@@ -1,5 +1,5 @@
 local TABLES = {
-    [[CREATE TABLE IF NOT EXISTS `mri_whatsapp_accounts` (
+    [[CREATE TABLE IF NOT EXISTS `mri_whatzapp_accounts` (
         `phone` VARCHAR(20) NOT NULL,
         `name` VARCHAR(40) NOT NULL,
         `about` VARCHAR(140) NOT NULL DEFAULT '',
@@ -11,7 +11,7 @@ local TABLES = {
         PRIMARY KEY (`phone`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci]],
 
-    [[CREATE TABLE IF NOT EXISTS `mri_whatsapp_chats` (
+    [[CREATE TABLE IF NOT EXISTS `mri_whatzapp_chats` (
         `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
         `kind` VARCHAR(8) NOT NULL,
         `direct_key` VARCHAR(48) NULL,
@@ -25,7 +25,7 @@ local TABLES = {
         UNIQUE KEY `direct_key` (`direct_key`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci]],
 
-    [[CREATE TABLE IF NOT EXISTS `mri_whatsapp_members` (
+    [[CREATE TABLE IF NOT EXISTS `mri_whatzapp_members` (
         `chat_id` INT UNSIGNED NOT NULL,
         `phone` VARCHAR(20) NOT NULL,
         `role` VARCHAR(8) NOT NULL DEFAULT 'member',
@@ -40,7 +40,7 @@ local TABLES = {
         KEY `phone` (`phone`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci]],
 
-    [[CREATE TABLE IF NOT EXISTS `mri_whatsapp_messages` (
+    [[CREATE TABLE IF NOT EXISTS `mri_whatzapp_messages` (
         `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
         `chat_id` INT UNSIGNED NOT NULL,
         `sender` VARCHAR(20) NOT NULL,
@@ -56,33 +56,33 @@ local TABLES = {
         KEY `chat` (`chat_id`, `id`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci]],
 
-    [[CREATE TABLE IF NOT EXISTS `mri_whatsapp_reactions` (
+    [[CREATE TABLE IF NOT EXISTS `mri_whatzapp_reactions` (
         `message_id` INT UNSIGNED NOT NULL,
         `phone` VARCHAR(20) NOT NULL,
         `emoji` VARCHAR(16) NOT NULL,
         PRIMARY KEY (`message_id`, `phone`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci]],
 
-    [[CREATE TABLE IF NOT EXISTS `mri_whatsapp_hidden` (
+    [[CREATE TABLE IF NOT EXISTS `mri_whatzapp_hidden` (
         `message_id` INT UNSIGNED NOT NULL,
         `phone` VARCHAR(20) NOT NULL,
         PRIMARY KEY (`message_id`, `phone`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci]],
 
-    [[CREATE TABLE IF NOT EXISTS `mri_whatsapp_starred` (
+    [[CREATE TABLE IF NOT EXISTS `mri_whatzapp_starred` (
         `message_id` INT UNSIGNED NOT NULL,
         `phone` VARCHAR(20) NOT NULL,
         PRIMARY KEY (`message_id`, `phone`),
         KEY `phone` (`phone`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci]],
 
-    [[CREATE TABLE IF NOT EXISTS `mri_whatsapp_blocks` (
+    [[CREATE TABLE IF NOT EXISTS `mri_whatzapp_blocks` (
         `phone` VARCHAR(20) NOT NULL,
         `blocked` VARCHAR(20) NOT NULL,
         PRIMARY KEY (`phone`, `blocked`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci]],
 
-    [[CREATE TABLE IF NOT EXISTS `mri_whatsapp_statuses` (
+    [[CREATE TABLE IF NOT EXISTS `mri_whatzapp_statuses` (
         `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
         `phone` VARCHAR(20) NOT NULL,
         `kind` VARCHAR(8) NOT NULL,
@@ -96,14 +96,14 @@ local TABLES = {
         KEY `expires_at` (`expires_at`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci]],
 
-    [[CREATE TABLE IF NOT EXISTS `mri_whatsapp_status_views` (
+    [[CREATE TABLE IF NOT EXISTS `mri_whatzapp_status_views` (
         `status_id` INT UNSIGNED NOT NULL,
         `phone` VARCHAR(20) NOT NULL,
         `viewed_at` INT UNSIGNED NOT NULL,
         PRIMARY KEY (`status_id`, `phone`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci]],
 
-    [[CREATE TABLE IF NOT EXISTS `mri_whatsapp_calls` (
+    [[CREATE TABLE IF NOT EXISTS `mri_whatzapp_calls` (
         `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
         `caller` VARCHAR(20) NOT NULL,
         `callee` VARCHAR(20) NOT NULL,

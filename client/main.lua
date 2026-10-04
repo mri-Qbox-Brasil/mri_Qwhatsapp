@@ -1,4 +1,4 @@
-local APP_ID = 'mri_whatsapp'
+local APP_ID = 'mri_whatzapp'
 local PHONE = 'sd-phone'
 
 local ACTIONS = {}
@@ -13,7 +13,7 @@ for _, name in ipairs({
 }) do ACTIONS[name] = true end
 
 local function foreground(open)
-    lib.callback('mri_Qwhatsapp:foreground', false, function() end, { open = open })
+    lib.callback('mri_Qwhatzapp:foreground', false, function() end, { open = open })
 end
 
 ---Icon URL tagged with a hash of the file, so the NUI cache drops it whenever the icon changes.
@@ -27,7 +27,7 @@ end
 local function register()
     local ok, err = exports[PHONE]:addCustomApp({
         identifier = APP_ID,
-        name = 'Whatzap',
+        name = 'Whatzapp',
         description = locale('app_description'),
         developer = 'MRI Qbox',
         defaultApp = true,
@@ -47,14 +47,14 @@ AddEventHandler('onClientResourceStart', function(resource)
     if resource == PHONE then register() end
 end)
 
-RegisterNetEvent('mri_Qwhatsapp:client:push', function(action, data)
+RegisterNetEvent('mri_Qwhatzapp:client:push', function(action, data)
     exports[PHONE]:sendCustomAppMessage(APP_ID, { action = action, data = data })
 end)
 
 RegisterNUICallback('rpc', function(data, cb)
     local action = type(data) == 'table' and data.action or nil
     if not ACTIONS[action] then return cb({ ok = false, error = 'invalid' }) end
-    local result = lib.callback.await('mri_Qwhatsapp:' .. action, false, data.payload)
+    local result = lib.callback.await('mri_Qwhatzapp:' .. action, false, data.payload)
     cb(result or { ok = false, error = 'server' })
 end)
 

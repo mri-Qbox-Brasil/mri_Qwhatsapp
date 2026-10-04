@@ -80,7 +80,7 @@ handlers.updateProfile = function(_, phone, payload)
     end
     if #sets == 0 then return fail('invalid') end
     params[#params + 1] = phone
-    MySQL.update.await(('UPDATE `mri_whatsapp_accounts` SET %s WHERE `phone` = ?'):format(table.concat(sets, ', ')), params)
+    MySQL.update.await(('UPDATE `mri_whatzapp_accounts` SET %s WHERE `phone` = ?'):format(table.concat(sets, ', ')), params)
     return ok(identity.serializeAccount(identity.account(phone)))
 end
 
@@ -101,7 +101,7 @@ handlers.foreground = function(source, phone, payload)
 end
 
 for name, fn in pairs(handlers) do
-    lib.callback.register('mri_Qwhatsapp:' .. name, function(source, payload)
+    lib.callback.register('mri_Qwhatzapp:' .. name, function(source, payload)
         if not ready then return fail('notReady') end
         local phone = identity.phone(source)
         if not phone then return fail('noPhone') end
