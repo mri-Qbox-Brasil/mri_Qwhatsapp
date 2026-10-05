@@ -24,7 +24,7 @@ O app entra pela API oficial de apps do sd-phone, então aparece sozinho no celu
 |---|---|---|
 | `sd-phone` | Sim | Número, agenda, notificações, câmera, galeria e discador |
 | `ox_lib` | Sim | Callbacks e locale |
-| `oxmysql` | Sim | Tabelas próprias `mri_whatzapp_*` |
+| `oxmysql` | Sim | Tabelas próprias `mri_qwhatzapp_*` |
 | `sd-tablet` | Não | O app aparece também no tablet (sem ligações, que são só do celular) |
 | `qbx_core` | Não | Nome do personagem como nome inicial do perfil |
 
@@ -86,7 +86,9 @@ Fotos e GIFs vêm da câmera, galeria e seletor de GIF do próprio sd-phone. Men
 
 Tabelas criadas automaticamente:
 
-`mri_whatzapp_accounts`, `mri_whatzapp_chats`, `mri_whatzapp_members`, `mri_whatzapp_messages`, `mri_whatzapp_reactions`, `mri_whatzapp_hidden`, `mri_whatzapp_starred`, `mri_whatzapp_blocks`, `mri_whatzapp_statuses`, `mri_whatzapp_status_views`, `mri_whatzapp_calls`.
+`mri_qwhatzapp_accounts`, `mri_qwhatzapp_chats`, `mri_qwhatzapp_members`, `mri_qwhatzapp_messages`, `mri_qwhatzapp_reactions`, `mri_qwhatzapp_hidden`, `mri_qwhatzapp_starred`, `mri_qwhatzapp_blocks`, `mri_qwhatzapp_statuses`, `mri_qwhatzapp_status_views`, `mri_qwhatzapp_calls`.
+
+Quem vem de uma versão antiga (`mri_whatzapp_*` ou `mri_whatsapp_*`) não precisa fazer nada: ao iniciar, o resource renomeia as tabelas antigas e mantém os dados.
 
 Status vencidos são limpos sozinhos a cada 10 minutos.
 

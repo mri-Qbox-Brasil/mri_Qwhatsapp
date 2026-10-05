@@ -4,7 +4,7 @@ game 'gta5'
 
 name 'mri_Qwhatzapp'
 author 'MRI Qbox Brasil'
-version '2.0.0'
+version '2.0.1'
 description 'Whatzapp: mensageiro para o sd-phone e o sd-tablet: conversas, grupos, status, mídia, áudio e ligações'
 
 ox_lib 'locale'

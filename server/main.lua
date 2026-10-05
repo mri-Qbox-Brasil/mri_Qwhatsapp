@@ -80,7 +80,7 @@ handlers.updateProfile = function(_, phone, payload)
     end
     if #sets == 0 then return fail('invalid') end
     params[#params + 1] = phone
-    MySQL.update.await(('UPDATE `mri_whatzapp_accounts` SET %s WHERE `phone` = ?'):format(table.concat(sets, ', ')), params)
+    MySQL.update.await(('UPDATE `mri_qwhatzapp_accounts` SET %s WHERE `phone` = ?'):format(table.concat(sets, ', ')), params)
     return ok(identity.serializeAccount(identity.account(phone)))
 end
 

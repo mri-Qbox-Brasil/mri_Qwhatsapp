@@ -34,25 +34,25 @@ end
 -------------------------------------------------------------------- membership
 
 local function member(chatId, phone)
-    return MySQL.single.await('SELECT * FROM `mri_whatzapp_members` WHERE `chat_id` = ? AND `phone` = ?', { chatId, phone })
+    return MySQL.single.await('SELECT * FROM `mri_qwhatzapp_members` WHERE `chat_id` = ? AND `phone` = ?', { chatId, phone })
 end
 
 local function memberRows(chatId)
-    return MySQL.query.await('SELECT * FROM `mri_whatzapp_members` WHERE `chat_id` = ?', { chatId }) or {}
+    return MySQL.query.await('SELECT * FROM `mri_qwhatzapp_members` WHERE `chat_id` = ?', { chatId }) or {}
 end
 
 local function chatRow(chatId)
-    return MySQL.single.await('SELECT * FROM `mri_whatzapp_chats` WHERE `id` = ?', { chatId })
+    return MySQL.single.await('SELECT * FROM `mri_qwhatzapp_chats` WHERE `id` = ?', { chatId })
 end
 
 local function isBlocked(owner, other)
-    return MySQL.scalar.await('SELECT 1 FROM `mri_whatzapp_blocks` WHERE `phone` = ? AND `blocked` = ?', { owner, other }) ~= nil
+    return MySQL.scalar.await('SELECT 1 FROM `mri_qwhatzapp_blocks` WHERE `phone` = ? AND `blocked` = ?', { owner, other }) ~= nil
 end
 chats.isBlocked = isBlocked
 
 local function latestId(chatId)
     -- COALESCE comes back as DECIMAL, which oxmysql hands over as a string.
-    return tonumber(MySQL.scalar.await('SELECT COALESCE(MAX(`id`), 0) FROM `mri_whatzapp_messages` WHERE `chat_id` = ?', { chatId })) or 0
+    return tonumber(MySQL.scalar.await('SELECT COALESCE(MAX(`id`), 0) FROM `mri_qwhatzapp_messages` WHERE `chat_id` = ?', { chatId })) or 0
 end
 
 -------------------------------------------------------------------- serialization
@@ -68,16 +68,16 @@ local function extras(rows, viewer)
     local reactions, starred, replies = {}, {}, {}
     if #ids == 0 then return reactions, starred, replies end
 
-    for _, row in ipairs(MySQL.query.await('SELECT * FROM `mri_whatzapp_reactions` WHERE `message_id` IN (?)', { ids }) or {}) do
+    for _, row in ipairs(MySQL.query.await('SELECT * FROM `mri_qwhatzapp_reactions` WHERE `message_id` IN (?)', { ids }) or {}) do
         reactions[row.message_id] = reactions[row.message_id] or {}
         local list = reactions[row.message_id]
         list[#list + 1] = { phone = row.phone, emoji = row.emoji }
     end
-    for _, row in ipairs(MySQL.query.await('SELECT `message_id` FROM `mri_whatzapp_starred` WHERE `phone` = ? AND `message_id` IN (?)', { viewer, ids }) or {}) do
+    for _, row in ipairs(MySQL.query.await('SELECT `message_id` FROM `mri_qwhatzapp_starred` WHERE `phone` = ? AND `message_id` IN (?)', { viewer, ids }) or {}) do
         starred[row.message_id] = true
     end
     if #replyIds > 0 then
-        for _, row in ipairs(MySQL.query.await('SELECT * FROM `mri_whatzapp_messages` WHERE `id` IN (?)', { replyIds }) or {}) do
+        for _, row in ipairs(MySQL.query.await('SELECT * FROM `mri_qwhatzapp_messages` WHERE `id` IN (?)', { replyIds }) or {}) do
             local revoked = isTrue(row.revoked)
             replies[row.id] = {
                 id = row.id,
@@ -123,7 +123,7 @@ local function serializeOne(row, viewer)
 end
 
 local function messageRow(id)
-    return MySQL.single.await('SELECT * FROM `mri_whatzapp_messages` WHERE `id` = ?', { id })
+    return MySQL.single.await('SELECT * FROM `mri_qwhatzapp_messages` WHERE `id` = ?', { id })
 end
 
 -------------------------------------------------------------------- receipts
@@ -175,15 +175,15 @@ end
 
 local CHAT_LIST_SQL = [[
 SELECT c.*, m.`role`, m.`last_read`, m.`cleared_before`, m.`pinned`, m.`archived`, m.`muted`, m.`joined_at`,
-    (SELECT MAX(x.`id`) FROM `mri_whatzapp_messages` x
+    (SELECT MAX(x.`id`) FROM `mri_qwhatzapp_messages` x
         WHERE x.`chat_id` = c.`id` AND x.`id` > m.`cleared_before`
-        AND NOT EXISTS (SELECT 1 FROM `mri_whatzapp_hidden` h WHERE h.`message_id` = x.`id` AND h.`phone` = m.`phone`)) AS `last_id`,
-    (SELECT COUNT(*) FROM `mri_whatzapp_messages` x
+        AND NOT EXISTS (SELECT 1 FROM `mri_qwhatzapp_hidden` h WHERE h.`message_id` = x.`id` AND h.`phone` = m.`phone`)) AS `last_id`,
+    (SELECT COUNT(*) FROM `mri_qwhatzapp_messages` x
         WHERE x.`chat_id` = c.`id` AND x.`id` > GREATEST(m.`last_read`, m.`cleared_before`)
         AND x.`sender` <> m.`phone` AND x.`kind` <> 'system'
-        AND NOT EXISTS (SELECT 1 FROM `mri_whatzapp_hidden` h WHERE h.`message_id` = x.`id` AND h.`phone` = m.`phone`)) AS `unread`
-FROM `mri_whatzapp_members` m
-JOIN `mri_whatzapp_chats` c ON c.`id` = m.`chat_id`
+        AND NOT EXISTS (SELECT 1 FROM `mri_qwhatzapp_hidden` h WHERE h.`message_id` = x.`id` AND h.`phone` = m.`phone`)) AS `unread`
+FROM `mri_qwhatzapp_members` m
+JOIN `mri_qwhatzapp_chats` c ON c.`id` = m.`chat_id`
 WHERE m.`phone` = ?]]
 
 local function listChats(phone, onlyChatId)
@@ -203,7 +203,7 @@ local function listChats(phone, onlyChatId)
     end
 
     local membersByChat, phones, seen = {}, {}, {}
-    for _, row in ipairs(MySQL.query.await('SELECT * FROM `mri_whatzapp_members` WHERE `chat_id` IN (?)', { chatIds }) or {}) do
+    for _, row in ipairs(MySQL.query.await('SELECT * FROM `mri_qwhatzapp_members` WHERE `chat_id` IN (?)', { chatIds }) or {}) do
         membersByChat[row.chat_id] = membersByChat[row.chat_id] or {}
         local list = membersByChat[row.chat_id]
         list[#list + 1] = row
@@ -216,7 +216,7 @@ local function listChats(phone, onlyChatId)
 
     local lastById = {}
     if #lastIds > 0 then
-        local lastRows = MySQL.query.await('SELECT * FROM `mri_whatzapp_messages` WHERE `id` IN (?)', { lastIds }) or {}
+        local lastRows = MySQL.query.await('SELECT * FROM `mri_qwhatzapp_messages` WHERE `id` IN (?)', { lastIds }) or {}
         for _, message in ipairs(serializeRows(lastRows, phone)) do lastById[message.id] = message end
     end
 
@@ -279,7 +279,7 @@ end
 local function insertMessage(chatId, sender, kind, body, media, meta, replyTo)
     local createdAt = now()
     local id = MySQL.insert.await(
-        'INSERT INTO `mri_whatzapp_messages` (`chat_id`, `sender`, `kind`, `body`, `media`, `meta`, `reply_to`, `created_at`) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        'INSERT INTO `mri_qwhatzapp_messages` (`chat_id`, `sender`, `kind`, `body`, `media`, `meta`, `reply_to`, `created_at`) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
         { chatId, sender, kind, body, media, meta and next(meta) and json.encode(meta) or nil, replyTo, createdAt }
     )
     return messageRow(id)
@@ -289,7 +289,7 @@ end
 local function deliver(chat, row, senderPhone)
     local rows = memberRows(chat.id)
     local hidden = {}
-    for _, h in ipairs(MySQL.query.await('SELECT `phone` FROM `mri_whatzapp_hidden` WHERE `message_id` = ?', { row.id }) or {}) do
+    for _, h in ipairs(MySQL.query.await('SELECT `phone` FROM `mri_qwhatzapp_hidden` WHERE `message_id` = ?', { row.id }) or {}) do
         hidden[h.phone] = true
     end
 
@@ -325,12 +325,12 @@ local function deliver(chat, row, senderPhone)
 
     if #delivered > 0 then
         MySQL.update.await(
-            'UPDATE `mri_whatzapp_members` SET `last_delivered` = GREATEST(`last_delivered`, ?) WHERE `chat_id` = ? AND `phone` IN (?)',
+            'UPDATE `mri_qwhatzapp_members` SET `last_delivered` = GREATEST(`last_delivered`, ?) WHERE `chat_id` = ? AND `phone` IN (?)',
             { row.id, chat.id, delivered }
         )
     end
     MySQL.update.await(
-        'UPDATE `mri_whatzapp_members` SET `last_read` = GREATEST(`last_read`, ?), `last_delivered` = GREATEST(`last_delivered`, ?) WHERE `chat_id` = ? AND `phone` = ?',
+        'UPDATE `mri_qwhatzapp_members` SET `last_read` = GREATEST(`last_read`, ?), `last_delivered` = GREATEST(`last_delivered`, ?) WHERE `chat_id` = ? AND `phone` = ?',
         { row.id, row.id, chat.id, senderPhone }
     )
     broadcastReceipts(chat.id)
@@ -416,7 +416,7 @@ local function hideFromBlockers(chat, row, phone)
     if chat.kind ~= 'direct' then return end
     for _, other in ipairs(memberRows(chat.id)) do
         if other.phone ~= phone and isBlocked(other.phone, phone) then
-            MySQL.insert.await('INSERT IGNORE INTO `mri_whatzapp_hidden` (`message_id`, `phone`) VALUES (?, ?)', { row.id, other.phone })
+            MySQL.insert.await('INSERT IGNORE INTO `mri_qwhatzapp_hidden` (`message_id`, `phone`) VALUES (?, ?)', { row.id, other.phone })
         end
     end
 end
@@ -480,11 +480,11 @@ end
 handlers.bootstrapChats = function(_, phone)
     -- Opening the app is when an offline recipient finally "receives" what was waiting.
     local pending = MySQL.query.await([[
-        SELECT m.`chat_id`, MAX(x.`id`) AS `latest` FROM `mri_whatzapp_members` m
-        JOIN `mri_whatzapp_messages` x ON x.`chat_id` = m.`chat_id` AND x.`id` > m.`last_delivered`
+        SELECT m.`chat_id`, MAX(x.`id`) AS `latest` FROM `mri_qwhatzapp_members` m
+        JOIN `mri_qwhatzapp_messages` x ON x.`chat_id` = m.`chat_id` AND x.`id` > m.`last_delivered`
         WHERE m.`phone` = ? GROUP BY m.`chat_id`]], { phone }) or {}
     for i = 1, #pending do
-        MySQL.update.await('UPDATE `mri_whatzapp_members` SET `last_delivered` = ? WHERE `chat_id` = ? AND `phone` = ?', { pending[i].latest, pending[i].chat_id, phone })
+        MySQL.update.await('UPDATE `mri_qwhatzapp_members` SET `last_delivered` = ? WHERE `chat_id` = ? AND `phone` = ?', { pending[i].latest, pending[i].chat_id, phone })
         broadcastReceipts(pending[i].chat_id)
     end
     return ok(listChats(phone))
@@ -496,8 +496,8 @@ handlers.messages = function(_, phone, payload)
     if not membership then return fail('notMember') end
 
     local size = config.pageSize
-    local base = [[SELECT * FROM `mri_whatzapp_messages` x WHERE x.`chat_id` = ? AND x.`id` > ?
-        AND NOT EXISTS (SELECT 1 FROM `mri_whatzapp_hidden` h WHERE h.`message_id` = x.`id` AND h.`phone` = ?)]]
+    local base = [[SELECT * FROM `mri_qwhatzapp_messages` x WHERE x.`chat_id` = ? AND x.`id` > ?
+        AND NOT EXISTS (SELECT 1 FROM `mri_qwhatzapp_hidden` h WHERE h.`message_id` = x.`id` AND h.`phone` = ?)]]
     local params = { chatId, membership.cleared_before, phone }
     local before, after, around = tonumber(payload.before), tonumber(payload.after), tonumber(payload.around)
 
@@ -537,7 +537,7 @@ handlers.markRead = function(_, phone, payload)
     local latest = latestId(chatId)
     if latest > membership.last_read then
         MySQL.update.await(
-            'UPDATE `mri_whatzapp_members` SET `last_read` = ?, `last_delivered` = GREATEST(`last_delivered`, ?) WHERE `chat_id` = ? AND `phone` = ?',
+            'UPDATE `mri_qwhatzapp_members` SET `last_read` = ?, `last_delivered` = GREATEST(`last_delivered`, ?) WHERE `chat_id` = ? AND `phone` = ?',
             { latest, latest, chatId, phone }
         )
         broadcastReceipts(chatId)
@@ -562,10 +562,10 @@ handlers.search = function(_, phone, payload)
     if not query or #query < 2 then return ok({}) end
     local pattern = '%' .. query:gsub('[%%_\\]', '\\%0') .. '%'
     local params = { phone, pattern }
-    local sql = [[SELECT x.* FROM `mri_whatzapp_messages` x
-        JOIN `mri_whatzapp_members` m ON m.`chat_id` = x.`chat_id` AND m.`phone` = ?
+    local sql = [[SELECT x.* FROM `mri_qwhatzapp_messages` x
+        JOIN `mri_qwhatzapp_members` m ON m.`chat_id` = x.`chat_id` AND m.`phone` = ?
         WHERE x.`id` > m.`cleared_before` AND x.`revoked` = 0 AND x.`kind` IN ('text', 'image', 'gif') AND x.`body` LIKE ?
-        AND NOT EXISTS (SELECT 1 FROM `mri_whatzapp_hidden` h WHERE h.`message_id` = x.`id` AND h.`phone` = m.`phone`)]]
+        AND NOT EXISTS (SELECT 1 FROM `mri_qwhatzapp_hidden` h WHERE h.`message_id` = x.`id` AND h.`phone` = m.`phone`)]]
     local chatId = tonumber(payload.chatId)
     if chatId then
         sql = sql .. ' AND x.`chat_id` = ?'
@@ -594,11 +594,11 @@ handlers.react = function(_, phone, payload)
     local row = ownMessage(phone, payload.messageId)
     if not row or isTrue(row.revoked) or row.kind == 'system' then return fail('invalid') end
     local emoji = type(payload.emoji) == 'string' and payload.emoji:sub(1, 16) or nil
-    local current = MySQL.scalar.await('SELECT `emoji` FROM `mri_whatzapp_reactions` WHERE `message_id` = ? AND `phone` = ?', { row.id, phone })
+    local current = MySQL.scalar.await('SELECT `emoji` FROM `mri_qwhatzapp_reactions` WHERE `message_id` = ? AND `phone` = ?', { row.id, phone })
     if not emoji or emoji == '' or current == emoji then
-        MySQL.update.await('DELETE FROM `mri_whatzapp_reactions` WHERE `message_id` = ? AND `phone` = ?', { row.id, phone })
+        MySQL.update.await('DELETE FROM `mri_qwhatzapp_reactions` WHERE `message_id` = ? AND `phone` = ?', { row.id, phone })
     else
-        MySQL.insert.await('REPLACE INTO `mri_whatzapp_reactions` (`message_id`, `phone`, `emoji`) VALUES (?, ?, ?)', { row.id, phone, emoji })
+        MySQL.insert.await('REPLACE INTO `mri_qwhatzapp_reactions` (`message_id`, `phone`, `emoji`) VALUES (?, ?, ?)', { row.id, phone, emoji })
     end
     pushMessageUpdate(row)
     return ok(true)
@@ -610,7 +610,7 @@ handlers.edit = function(_, phone, payload)
     if now() - row.created_at > config.editWindowMinutes * 60 then return fail('tooLate') end
     local body = cleanText(payload.body, config.maxMessageLength)
     if not body then return fail('empty') end
-    MySQL.update.await('UPDATE `mri_whatzapp_messages` SET `body` = ?, `edited` = 1 WHERE `id` = ?', { body, row.id })
+    MySQL.update.await('UPDATE `mri_qwhatzapp_messages` SET `body` = ?, `edited` = 1 WHERE `id` = ?', { body, row.id })
     row = messageRow(row.id)
     pushMessageUpdate(row)
     return ok(serializeOne(row, phone))
@@ -622,13 +622,13 @@ handlers.delete = function(_, phone, payload)
     if payload.scope == 'all' then
         if row.sender ~= phone or isTrue(row.revoked) or row.kind == 'system' then return fail('invalid') end
         if now() - row.created_at > config.revokeWindowMinutes * 60 then return fail('tooLate') end
-        MySQL.update.await('UPDATE `mri_whatzapp_messages` SET `revoked` = 1, `body` = NULL, `media` = NULL, `meta` = NULL WHERE `id` = ?', { row.id })
-        MySQL.update.await('DELETE FROM `mri_whatzapp_reactions` WHERE `message_id` = ?', { row.id })
+        MySQL.update.await('UPDATE `mri_qwhatzapp_messages` SET `revoked` = 1, `body` = NULL, `media` = NULL, `meta` = NULL WHERE `id` = ?', { row.id })
+        MySQL.update.await('DELETE FROM `mri_qwhatzapp_reactions` WHERE `message_id` = ?', { row.id })
         row = messageRow(row.id)
         pushMessageUpdate(row)
         return ok(serializeOne(row, phone))
     end
-    MySQL.insert.await('INSERT IGNORE INTO `mri_whatzapp_hidden` (`message_id`, `phone`) VALUES (?, ?)', { row.id, phone })
+    MySQL.insert.await('INSERT IGNORE INTO `mri_qwhatzapp_hidden` (`message_id`, `phone`) VALUES (?, ?)', { row.id, phone })
     return ok(true)
 end
 
@@ -636,17 +636,17 @@ handlers.star = function(_, phone, payload)
     local row = ownMessage(phone, payload.messageId)
     if not row then return fail('invalid') end
     if payload.on then
-        MySQL.insert.await('INSERT IGNORE INTO `mri_whatzapp_starred` (`message_id`, `phone`) VALUES (?, ?)', { row.id, phone })
+        MySQL.insert.await('INSERT IGNORE INTO `mri_qwhatzapp_starred` (`message_id`, `phone`) VALUES (?, ?)', { row.id, phone })
     else
-        MySQL.update.await('DELETE FROM `mri_whatzapp_starred` WHERE `message_id` = ? AND `phone` = ?', { row.id, phone })
+        MySQL.update.await('DELETE FROM `mri_qwhatzapp_starred` WHERE `message_id` = ? AND `phone` = ?', { row.id, phone })
     end
     return ok(true)
 end
 
 handlers.starred = function(_, phone)
-    local rows = MySQL.query.await([[SELECT x.* FROM `mri_whatzapp_starred` s
-        JOIN `mri_whatzapp_messages` x ON x.`id` = s.`message_id`
-        JOIN `mri_whatzapp_members` m ON m.`chat_id` = x.`chat_id` AND m.`phone` = s.`phone`
+    local rows = MySQL.query.await([[SELECT x.* FROM `mri_qwhatzapp_starred` s
+        JOIN `mri_qwhatzapp_messages` x ON x.`id` = s.`message_id`
+        JOIN `mri_qwhatzapp_members` m ON m.`chat_id` = x.`chat_id` AND m.`phone` = s.`phone`
         WHERE s.`phone` = ? AND x.`revoked` = 0 ORDER BY x.`id` DESC LIMIT 100]], { phone }) or {}
     return ok(serializeRows(rows, phone))
 end
@@ -655,9 +655,9 @@ handlers.media = function(_, phone, payload)
     local chatId = tonumber(payload.chatId)
     local membership = chatId and member(chatId, phone)
     if not membership then return fail('notMember') end
-    local rows = MySQL.query.await([[SELECT x.* FROM `mri_whatzapp_messages` x WHERE x.`chat_id` = ? AND x.`id` > ?
+    local rows = MySQL.query.await([[SELECT x.* FROM `mri_qwhatzapp_messages` x WHERE x.`chat_id` = ? AND x.`id` > ?
         AND x.`revoked` = 0 AND x.`kind` IN ('image', 'gif')
-        AND NOT EXISTS (SELECT 1 FROM `mri_whatzapp_hidden` h WHERE h.`message_id` = x.`id` AND h.`phone` = ?)
+        AND NOT EXISTS (SELECT 1 FROM `mri_qwhatzapp_hidden` h WHERE h.`message_id` = x.`id` AND h.`phone` = ?)
         ORDER BY x.`id` DESC LIMIT 90]], { chatId, membership.cleared_before, phone }) or {}
     return ok(serializeRows(rows, phone))
 end
@@ -670,18 +670,18 @@ handlers.openDirect = function(source, phone, payload)
     if not identity.inService(other) then return fail('notInService') end
 
     local key = phone < other and (phone .. ':' .. other) or (other .. ':' .. phone)
-    local chatId = MySQL.scalar.await('SELECT `id` FROM `mri_whatzapp_chats` WHERE `direct_key` = ?', { key })
+    local chatId = MySQL.scalar.await('SELECT `id` FROM `mri_qwhatzapp_chats` WHERE `direct_key` = ?', { key })
     if not chatId then
         local t = now()
         chatId = MySQL.insert.await(
-            'INSERT IGNORE INTO `mri_whatzapp_chats` (`kind`, `direct_key`, `created_by`, `created_at`) VALUES (?, ?, ?, ?)',
+            'INSERT IGNORE INTO `mri_qwhatzapp_chats` (`kind`, `direct_key`, `created_by`, `created_at`) VALUES (?, ?, ?, ?)',
             { 'direct', key, phone, t }
         )
         if not chatId or chatId == 0 then
-            chatId = MySQL.scalar.await('SELECT `id` FROM `mri_whatzapp_chats` WHERE `direct_key` = ?', { key })
+            chatId = MySQL.scalar.await('SELECT `id` FROM `mri_qwhatzapp_chats` WHERE `direct_key` = ?', { key })
         end
         MySQL.insert.await(
-            'INSERT IGNORE INTO `mri_whatzapp_members` (`chat_id`, `phone`, `role`, `joined_at`) VALUES (?, ?, ?, ?), (?, ?, ?, ?)',
+            'INSERT IGNORE INTO `mri_qwhatzapp_members` (`chat_id`, `phone`, `role`, `joined_at`) VALUES (?, ?, ?, ?), (?, ?, ?, ?)',
             { chatId, phone, 'member', t, chatId, other, 'member', t }
         )
     end
@@ -701,7 +701,7 @@ handlers.chatSettings = function(_, phone, payload)
     if #sets == 0 then return fail('invalid') end
     params[#params + 1] = chatId
     params[#params + 1] = phone
-    MySQL.update.await(('UPDATE `mri_whatzapp_members` SET %s WHERE `chat_id` = ? AND `phone` = ?'):format(table.concat(sets, ', ')), params)
+    MySQL.update.await(('UPDATE `mri_qwhatzapp_members` SET %s WHERE `chat_id` = ? AND `phone` = ?'):format(table.concat(sets, ', ')), params)
     return ok(chatFor(phone, chatId))
 end
 
@@ -710,7 +710,7 @@ handlers.clearChat = function(_, phone, payload)
     if not chatId or not member(chatId, phone) then return fail('notMember') end
     local latest = latestId(chatId)
     MySQL.update.await(
-        'UPDATE `mri_whatzapp_members` SET `cleared_before` = ?, `last_read` = GREATEST(`last_read`, ?) WHERE `chat_id` = ? AND `phone` = ?',
+        'UPDATE `mri_qwhatzapp_members` SET `cleared_before` = ?, `last_read` = GREATEST(`last_read`, ?) WHERE `chat_id` = ? AND `phone` = ?',
         { latest, latest, chatId, phone }
     )
     return ok(true)
@@ -723,7 +723,7 @@ handlers.deleteChat = function(_, phone, payload)
     if chat.kind == 'group' then return fail('leaveFirst') end
     local latest = latestId(chatId)
     MySQL.update.await(
-        'UPDATE `mri_whatzapp_members` SET `cleared_before` = ?, `last_read` = GREATEST(`last_read`, ?), `pinned` = 0, `archived` = 0 WHERE `chat_id` = ? AND `phone` = ?',
+        'UPDATE `mri_qwhatzapp_members` SET `cleared_before` = ?, `last_read` = GREATEST(`last_read`, ?), `pinned` = 0, `archived` = 0 WHERE `chat_id` = ? AND `phone` = ?',
         { latest, latest, chatId, phone }
     )
     return ok(true)
@@ -738,9 +738,9 @@ handlers.chatInfo = function(_, phone, payload)
         local other = info.chat.peer
         info.presence = identity.presence(other, phone)
         info.blocked = isBlocked(phone, other)
-        local groups = MySQL.query.await([[SELECT c.`id`, c.`name`, c.`avatar` FROM `mri_whatzapp_chats` c
-            JOIN `mri_whatzapp_members` a ON a.`chat_id` = c.`id` AND a.`phone` = ?
-            JOIN `mri_whatzapp_members` b ON b.`chat_id` = c.`id` AND b.`phone` = ?
+        local groups = MySQL.query.await([[SELECT c.`id`, c.`name`, c.`avatar` FROM `mri_qwhatzapp_chats` c
+            JOIN `mri_qwhatzapp_members` a ON a.`chat_id` = c.`id` AND a.`phone` = ?
+            JOIN `mri_qwhatzapp_members` b ON b.`chat_id` = c.`id` AND b.`phone` = ?
             WHERE c.`kind` = 'group' LIMIT 20]], { phone, other }) or {}
         info.commonGroups = groups
     end
@@ -779,12 +779,12 @@ handlers.createGroup = function(_, phone, payload)
 
     local t = now()
     local chatId = MySQL.insert.await(
-        'INSERT INTO `mri_whatzapp_chats` (`kind`, `name`, `avatar`, `created_by`, `created_at`) VALUES (?, ?, ?, ?, ?)',
+        'INSERT INTO `mri_qwhatzapp_chats` (`kind`, `name`, `avatar`, `created_by`, `created_at`) VALUES (?, ?, ?, ?, ?)',
         { 'group', name, isUrl(payload.avatar) and payload.avatar or nil, phone, t }
     )
-    MySQL.insert.await('INSERT INTO `mri_whatzapp_members` (`chat_id`, `phone`, `role`, `joined_at`) VALUES (?, ?, ?, ?)', { chatId, phone, 'admin', t })
+    MySQL.insert.await('INSERT INTO `mri_qwhatzapp_members` (`chat_id`, `phone`, `role`, `joined_at`) VALUES (?, ?, ?, ?)', { chatId, phone, 'admin', t })
     for i = 1, #members do
-        MySQL.insert.await('INSERT INTO `mri_whatzapp_members` (`chat_id`, `phone`, `role`, `joined_at`) VALUES (?, ?, ?, ?)', { chatId, members[i], 'member', t })
+        MySQL.insert.await('INSERT INTO `mri_qwhatzapp_members` (`chat_id`, `phone`, `role`, `joined_at`) VALUES (?, ?, ?, ?)', { chatId, members[i], 'member', t })
     end
     local chat = chatRow(chatId)
     systemMessage(chat, phone, 'created', nil, name)
@@ -801,22 +801,22 @@ handlers.updateGroup = function(_, phone, payload)
         local name = cleanText(payload.name, 40)
         if not name then return fail('nameRequired') end
         if name ~= chat.name then
-            MySQL.update.await('UPDATE `mri_whatzapp_chats` SET `name` = ? WHERE `id` = ?', { name, chatId })
+            MySQL.update.await('UPDATE `mri_qwhatzapp_chats` SET `name` = ? WHERE `id` = ?', { name, chatId })
             systemMessage(chat, phone, 'renamed', nil, name)
         end
     end
     if payload.description ~= nil then
         local description = type(payload.description) == 'string' and trim(payload.description):sub(1, 300) or ''
-        MySQL.update.await('UPDATE `mri_whatzapp_chats` SET `description` = ? WHERE `id` = ?', { description ~= '' and description or nil, chatId })
+        MySQL.update.await('UPDATE `mri_qwhatzapp_chats` SET `description` = ? WHERE `id` = ?', { description ~= '' and description or nil, chatId })
         systemMessage(chat, phone, 'description')
     end
     if payload.avatar ~= nil then
         local avatar = isUrl(payload.avatar) and payload.avatar or nil
-        MySQL.update.await('UPDATE `mri_whatzapp_chats` SET `avatar` = ? WHERE `id` = ?', { avatar, chatId })
+        MySQL.update.await('UPDATE `mri_qwhatzapp_chats` SET `avatar` = ? WHERE `id` = ?', { avatar, chatId })
         systemMessage(chat, phone, 'avatar', nil, avatar and 'set' or 'removed')
     end
     if payload.onlyAdmins ~= nil then
-        MySQL.update.await('UPDATE `mri_whatzapp_chats` SET `only_admins` = ? WHERE `id` = ?', { payload.onlyAdmins and 1 or 0, chatId })
+        MySQL.update.await('UPDATE `mri_qwhatzapp_chats` SET `only_admins` = ? WHERE `id` = ?', { payload.onlyAdmins and 1 or 0, chatId })
         systemMessage(chat, phone, 'onlyAdmins', nil, payload.onlyAdmins and 'on' or 'off')
     end
     pushChat(chatId)
@@ -841,7 +841,7 @@ handlers.addMembers = function(_, phone, payload)
     local latest, t = latestId(chatId), now()
     for i = 1, #added do
         MySQL.insert.await(
-            'INSERT INTO `mri_whatzapp_members` (`chat_id`, `phone`, `role`, `joined_at`, `cleared_before`, `last_read`, `last_delivered`) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            'INSERT INTO `mri_qwhatzapp_members` (`chat_id`, `phone`, `role`, `joined_at`, `cleared_before`, `last_read`, `last_delivered`) VALUES (?, ?, ?, ?, ?, ?, ?)',
             { chatId, added[i], 'member', t, latest, latest, latest }
         )
         systemMessage(chat, phone, 'added', added[i])
@@ -851,11 +851,11 @@ handlers.addMembers = function(_, phone, payload)
 end
 
 local function promoteSuccessor(chatId)
-    local admins = MySQL.scalar.await('SELECT COUNT(*) FROM `mri_whatzapp_members` WHERE `chat_id` = ? AND `role` = ?', { chatId, 'admin' })
+    local admins = MySQL.scalar.await('SELECT COUNT(*) FROM `mri_qwhatzapp_members` WHERE `chat_id` = ? AND `role` = ?', { chatId, 'admin' })
     if (admins or 0) > 0 then return end
-    local successor = MySQL.scalar.await('SELECT `phone` FROM `mri_whatzapp_members` WHERE `chat_id` = ? ORDER BY `joined_at` ASC LIMIT 1', { chatId })
+    local successor = MySQL.scalar.await('SELECT `phone` FROM `mri_qwhatzapp_members` WHERE `chat_id` = ? ORDER BY `joined_at` ASC LIMIT 1', { chatId })
     if successor then
-        MySQL.update.await('UPDATE `mri_whatzapp_members` SET `role` = ? WHERE `chat_id` = ? AND `phone` = ?', { 'admin', chatId, successor })
+        MySQL.update.await('UPDATE `mri_qwhatzapp_members` SET `role` = ? WHERE `chat_id` = ? AND `phone` = ?', { 'admin', chatId, successor })
     end
 end
 
@@ -866,7 +866,7 @@ handlers.removeMember = function(_, phone, payload)
     local target = digits(payload.phone)
     if target == phone or not member(chatId, target) then return fail('invalid') end
     systemMessage(chat, phone, 'removed', target)
-    MySQL.update.await('DELETE FROM `mri_whatzapp_members` WHERE `chat_id` = ? AND `phone` = ?', { chatId, target })
+    MySQL.update.await('DELETE FROM `mri_qwhatzapp_members` WHERE `chat_id` = ? AND `phone` = ?', { chatId, target })
     identity.push(target, 'chat:removed', { chatId = chatId })
     pushChat(chatId)
     return ok(chatFor(phone, chatId))
@@ -881,7 +881,7 @@ handlers.setRole = function(_, phone, payload)
     if target == phone or not membership then return fail('invalid') end
     local role = payload.role == 'admin' and 'admin' or 'member'
     if membership.role == role then return ok(chatFor(phone, chatId)) end
-    MySQL.update.await('UPDATE `mri_whatzapp_members` SET `role` = ? WHERE `chat_id` = ? AND `phone` = ?', { role, chatId, target })
+    MySQL.update.await('UPDATE `mri_qwhatzapp_members` SET `role` = ? WHERE `chat_id` = ? AND `phone` = ?', { role, chatId, target })
     systemMessage(chat, phone, role == 'admin' and 'promoted' or 'demoted', target)
     pushChat(chatId)
     return ok(chatFor(phone, chatId))
@@ -892,14 +892,14 @@ handlers.leaveGroup = function(_, phone, payload)
     local chat = chatId and chatRow(chatId)
     if not chat or chat.kind ~= 'group' or not member(chatId, phone) then return fail('notMember') end
     systemMessage(chat, phone, 'left')
-    MySQL.update.await('DELETE FROM `mri_whatzapp_members` WHERE `chat_id` = ? AND `phone` = ?', { chatId, phone })
-    local remaining = MySQL.scalar.await('SELECT COUNT(*) FROM `mri_whatzapp_members` WHERE `chat_id` = ?', { chatId }) or 0
+    MySQL.update.await('DELETE FROM `mri_qwhatzapp_members` WHERE `chat_id` = ? AND `phone` = ?', { chatId, phone })
+    local remaining = MySQL.scalar.await('SELECT COUNT(*) FROM `mri_qwhatzapp_members` WHERE `chat_id` = ?', { chatId }) or 0
     if remaining == 0 then
-        for _, tbl in ipairs({ 'mri_whatzapp_reactions', 'mri_whatzapp_hidden', 'mri_whatzapp_starred' }) do
-            MySQL.update.await(('DELETE t FROM `%s` t JOIN `mri_whatzapp_messages` x ON x.`id` = t.`message_id` WHERE x.`chat_id` = ?'):format(tbl), { chatId })
+        for _, tbl in ipairs({ 'mri_qwhatzapp_reactions', 'mri_qwhatzapp_hidden', 'mri_qwhatzapp_starred' }) do
+            MySQL.update.await(('DELETE t FROM `%s` t JOIN `mri_qwhatzapp_messages` x ON x.`id` = t.`message_id` WHERE x.`chat_id` = ?'):format(tbl), { chatId })
         end
-        MySQL.update.await('DELETE FROM `mri_whatzapp_messages` WHERE `chat_id` = ?', { chatId })
-        MySQL.update.await('DELETE FROM `mri_whatzapp_chats` WHERE `id` = ?', { chatId })
+        MySQL.update.await('DELETE FROM `mri_qwhatzapp_messages` WHERE `chat_id` = ?', { chatId })
+        MySQL.update.await('DELETE FROM `mri_qwhatzapp_chats` WHERE `id` = ?', { chatId })
     else
         promoteSuccessor(chatId)
         pushChat(chatId)
@@ -913,16 +913,16 @@ handlers.block = function(_, phone, payload)
     local other = digits(payload.phone)
     if other == '' or other == phone then return fail('invalidNumber') end
     if payload.on then
-        MySQL.insert.await('INSERT IGNORE INTO `mri_whatzapp_blocks` (`phone`, `blocked`) VALUES (?, ?)', { phone, other })
+        MySQL.insert.await('INSERT IGNORE INTO `mri_qwhatzapp_blocks` (`phone`, `blocked`) VALUES (?, ?)', { phone, other })
     else
-        MySQL.update.await('DELETE FROM `mri_whatzapp_blocks` WHERE `phone` = ? AND `blocked` = ?', { phone, other })
+        MySQL.update.await('DELETE FROM `mri_qwhatzapp_blocks` WHERE `phone` = ? AND `blocked` = ?', { phone, other })
     end
     return ok(chats.blockedList(phone))
 end
 
 function chats.blockedList(phone)
     local out = {}
-    for _, row in ipairs(MySQL.query.await('SELECT `blocked` FROM `mri_whatzapp_blocks` WHERE `phone` = ?', { phone }) or {}) do
+    for _, row in ipairs(MySQL.query.await('SELECT `blocked` FROM `mri_qwhatzapp_blocks` WHERE `phone` = ?', { phone }) or {}) do
         out[#out + 1] = row.blocked
     end
     return out

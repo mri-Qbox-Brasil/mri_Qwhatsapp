@@ -25,10 +25,10 @@ handlers.callLog = function(_, phone, payload)
     if not identity.inService(other) then return fail('notInService') end
     if chats.isBlocked(phone, other) then return fail('youBlocked') end
     local id = MySQL.insert.await(
-        'INSERT INTO `mri_whatzapp_calls` (`caller`, `callee`, `video`, `created_at`) VALUES (?, ?, ?, ?)',
+        'INSERT INTO `mri_qwhatzapp_calls` (`caller`, `callee`, `video`, `created_at`) VALUES (?, ?, ?, ?)',
         { phone, other, payload.video and 1 or 0, identity.now() }
     )
-    local row = MySQL.single.await('SELECT * FROM `mri_whatzapp_calls` WHERE `id` = ?', { id })
+    local row = MySQL.single.await('SELECT * FROM `mri_qwhatzapp_calls` WHERE `id` = ?', { id })
     if not chats.isBlocked(other, phone) then
         identity.push(other, 'call:new', serialize(row, other))
     end
@@ -37,7 +37,7 @@ end
 
 handlers.callList = function(_, phone)
     local rows = MySQL.query.await(
-        'SELECT * FROM `mri_whatzapp_calls` WHERE (`caller` = ? AND `caller_hidden` = 0) OR (`callee` = ? AND `callee_hidden` = 0) ORDER BY `id` DESC LIMIT ?',
+        'SELECT * FROM `mri_qwhatzapp_calls` WHERE (`caller` = ? AND `caller_hidden` = 0) OR (`callee` = ? AND `callee_hidden` = 0) ORDER BY `id` DESC LIMIT ?',
         { phone, phone, config.callLogLimit }
     ) or {}
     local out = {}
@@ -46,8 +46,8 @@ handlers.callList = function(_, phone)
 end
 
 handlers.callClear = function(_, phone)
-    MySQL.update.await('UPDATE `mri_whatzapp_calls` SET `caller_hidden` = 1 WHERE `caller` = ?', { phone })
-    MySQL.update.await('UPDATE `mri_whatzapp_calls` SET `callee_hidden` = 1 WHERE `callee` = ?', { phone })
+    MySQL.update.await('UPDATE `mri_qwhatzapp_calls` SET `caller_hidden` = 1 WHERE `caller` = ?', { phone })
+    MySQL.update.await('UPDATE `mri_qwhatzapp_calls` SET `callee_hidden` = 1 WHERE `callee` = ?', { phone })
     return ok(true)
 end
 

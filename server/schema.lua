@@ -1,5 +1,5 @@
 local TABLES = {
-    [[CREATE TABLE IF NOT EXISTS `mri_whatzapp_accounts` (
+    [[CREATE TABLE IF NOT EXISTS `mri_qwhatzapp_accounts` (
         `phone` VARCHAR(20) NOT NULL,
         `name` VARCHAR(40) NOT NULL,
         `about` VARCHAR(140) NOT NULL DEFAULT '',
@@ -11,7 +11,7 @@ local TABLES = {
         PRIMARY KEY (`phone`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci]],
 
-    [[CREATE TABLE IF NOT EXISTS `mri_whatzapp_chats` (
+    [[CREATE TABLE IF NOT EXISTS `mri_qwhatzapp_chats` (
         `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
         `kind` VARCHAR(8) NOT NULL,
         `direct_key` VARCHAR(48) NULL,
@@ -25,7 +25,7 @@ local TABLES = {
         UNIQUE KEY `direct_key` (`direct_key`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci]],
 
-    [[CREATE TABLE IF NOT EXISTS `mri_whatzapp_members` (
+    [[CREATE TABLE IF NOT EXISTS `mri_qwhatzapp_members` (
         `chat_id` INT UNSIGNED NOT NULL,
         `phone` VARCHAR(20) NOT NULL,
         `role` VARCHAR(8) NOT NULL DEFAULT 'member',
@@ -40,7 +40,7 @@ local TABLES = {
         KEY `phone` (`phone`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci]],
 
-    [[CREATE TABLE IF NOT EXISTS `mri_whatzapp_messages` (
+    [[CREATE TABLE IF NOT EXISTS `mri_qwhatzapp_messages` (
         `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
         `chat_id` INT UNSIGNED NOT NULL,
         `sender` VARCHAR(20) NOT NULL,
@@ -56,33 +56,33 @@ local TABLES = {
         KEY `chat` (`chat_id`, `id`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci]],
 
-    [[CREATE TABLE IF NOT EXISTS `mri_whatzapp_reactions` (
+    [[CREATE TABLE IF NOT EXISTS `mri_qwhatzapp_reactions` (
         `message_id` INT UNSIGNED NOT NULL,
         `phone` VARCHAR(20) NOT NULL,
         `emoji` VARCHAR(16) NOT NULL,
         PRIMARY KEY (`message_id`, `phone`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci]],
 
-    [[CREATE TABLE IF NOT EXISTS `mri_whatzapp_hidden` (
+    [[CREATE TABLE IF NOT EXISTS `mri_qwhatzapp_hidden` (
         `message_id` INT UNSIGNED NOT NULL,
         `phone` VARCHAR(20) NOT NULL,
         PRIMARY KEY (`message_id`, `phone`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci]],
 
-    [[CREATE TABLE IF NOT EXISTS `mri_whatzapp_starred` (
+    [[CREATE TABLE IF NOT EXISTS `mri_qwhatzapp_starred` (
         `message_id` INT UNSIGNED NOT NULL,
         `phone` VARCHAR(20) NOT NULL,
         PRIMARY KEY (`message_id`, `phone`),
         KEY `phone` (`phone`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci]],
 
-    [[CREATE TABLE IF NOT EXISTS `mri_whatzapp_blocks` (
+    [[CREATE TABLE IF NOT EXISTS `mri_qwhatzapp_blocks` (
         `phone` VARCHAR(20) NOT NULL,
         `blocked` VARCHAR(20) NOT NULL,
         PRIMARY KEY (`phone`, `blocked`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci]],
 
-    [[CREATE TABLE IF NOT EXISTS `mri_whatzapp_statuses` (
+    [[CREATE TABLE IF NOT EXISTS `mri_qwhatzapp_statuses` (
         `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
         `phone` VARCHAR(20) NOT NULL,
         `kind` VARCHAR(8) NOT NULL,
@@ -96,14 +96,14 @@ local TABLES = {
         KEY `expires_at` (`expires_at`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci]],
 
-    [[CREATE TABLE IF NOT EXISTS `mri_whatzapp_status_views` (
+    [[CREATE TABLE IF NOT EXISTS `mri_qwhatzapp_status_views` (
         `status_id` INT UNSIGNED NOT NULL,
         `phone` VARCHAR(20) NOT NULL,
         `viewed_at` INT UNSIGNED NOT NULL,
         PRIMARY KEY (`status_id`, `phone`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci]],
 
-    [[CREATE TABLE IF NOT EXISTS `mri_whatzapp_calls` (
+    [[CREATE TABLE IF NOT EXISTS `mri_qwhatzapp_calls` (
         `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
         `caller` VARCHAR(20) NOT NULL,
         `callee` VARCHAR(20) NOT NULL,
@@ -117,7 +117,31 @@ local TABLES = {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci]],
 }
 
+-- Earlier versions used these prefixes; their tables are renamed in place so no data is lost.
+local LEGACY_PREFIXES = { 'mri_whatzapp_', 'mri_whatsapp_' }
+local NAMES = { 'accounts', 'chats', 'members', 'messages', 'reactions', 'hidden', 'starred', 'blocks', 'statuses', 'status_views', 'calls' }
+
+local function tableExists(name)
+    return MySQL.scalar.await('SELECT 1 FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?', { name }) ~= nil
+end
+
+local function migrateLegacy()
+    for _, name in ipairs(NAMES) do
+        local target = 'mri_qwhatzapp_' .. name
+        if not tableExists(target) then
+            for _, prefix in ipairs(LEGACY_PREFIXES) do
+                if tableExists(prefix .. name) then
+                    MySQL.query.await(('RENAME TABLE `%s%s` TO `%s`'):format(prefix, name, target))
+                    lib.print.info(('renamed %s%s to %s'):format(prefix, name, target))
+                    break
+                end
+            end
+        end
+    end
+end
+
 return function()
+    migrateLegacy()
     for i = 1, #TABLES do
         MySQL.query.await(TABLES[i])
     end

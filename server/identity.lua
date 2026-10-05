@@ -69,14 +69,14 @@ end
 identity.serializeAccount = serializeAccount
 
 function identity.account(phone)
-    return MySQL.single.await('SELECT * FROM `mri_whatzapp_accounts` WHERE `phone` = ?', { phone })
+    return MySQL.single.await('SELECT * FROM `mri_qwhatzapp_accounts` WHERE `phone` = ?', { phone })
 end
 
 function identity.ensureAccount(source, phone)
     local row = identity.account(phone)
     if row then return row end
     MySQL.insert.await(
-        'INSERT IGNORE INTO `mri_whatzapp_accounts` (`phone`, `name`, `about`, `created_at`) VALUES (?, ?, ?, ?)',
+        'INSERT IGNORE INTO `mri_qwhatzapp_accounts` (`phone`, `name`, `about`, `created_at`) VALUES (?, ?, ?, ?)',
         { phone, characterName(source), locale('default_about'), identity.now() }
     )
     return identity.account(phone)
@@ -85,7 +85,7 @@ end
 function identity.accounts(phones)
     local map = {}
     if #phones == 0 then return map end
-    local rows = MySQL.query.await('SELECT * FROM `mri_whatzapp_accounts` WHERE `phone` IN (?)', { phones })
+    local rows = MySQL.query.await('SELECT * FROM `mri_qwhatzapp_accounts` WHERE `phone` IN (?)', { phones })
     for i = 1, #(rows or {}) do map[rows[i].phone] = rows[i] end
     return map
 end
@@ -145,7 +145,7 @@ function identity.setForeground(source, phone, open)
         foreground[phone] = true
     else
         foreground[phone] = nil
-        MySQL.update.await('UPDATE `mri_whatzapp_accounts` SET `last_seen` = ? WHERE `phone` = ?', { identity.now(), phone })
+        MySQL.update.await('UPDATE `mri_qwhatzapp_accounts` SET `last_seen` = ? WHERE `phone` = ?', { identity.now(), phone })
     end
     broadcastPresence(phone)
 end
@@ -157,7 +157,7 @@ AddEventHandler('playerDropped', function()
     identity.watch(src, nil)
     if phone and foreground[phone] then
         foreground[phone] = nil
-        MySQL.update('UPDATE `mri_whatzapp_accounts` SET `last_seen` = ? WHERE `phone` = ?', { identity.now(), phone })
+        MySQL.update('UPDATE `mri_qwhatzapp_accounts` SET `last_seen` = ? WHERE `phone` = ?', { identity.now(), phone })
         broadcastPresence(phone)
     end
 end)
